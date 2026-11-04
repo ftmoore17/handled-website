@@ -1277,7 +1277,10 @@ footer.site p{margin:6px 0 0; color:var(--muted); font-size:15.5px; max-width:44
             <li><b class="num">3</b><span><strong>Call 1, the Muse setup</strong> — and your Muse is up and running the same day.</span></li>
           </ol>
         </div>
-        <form class="book" id="book-form" novalidate>
+        <form class="book" id="book-form" action="https://formsubmit.co/ftmoore17@gmail.com" method="POST" novalidate>
+          <input type="hidden" name="_subject" value="New booking request — Handled.">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
           <div class="field">
             <label for="f-name">Your name</label>
             <input id="f-name" name="name" type="text" autocomplete="name" placeholder="e.g. Jordan Ellis">
@@ -1299,7 +1302,7 @@ footer.site p{margin:6px 0 0; color:var(--muted); font-size:15.5px; max-width:44
           </div>
           <button class="btn btn-primary btn-large" type="submit" style="width:100%">Request My Muse Setup</button>
           <div class="form-msg" id="form-msg" role="status"></div>
-          <p class="form-note">This form is a preview of the booking form — it does not send anything yet. Booking opens here shortly.</p>
+          <p class="form-note">We’ll reply to the email address above to arrange your setup.</p>
         </form>
       </div>
     </div>
@@ -1386,11 +1389,60 @@ footer.site p{margin:6px 0 0; color:var(--muted); font-size:15.5px; max-width:44
   showPage(routeFromHash()||'home');
   if(window.location.hash==='#tracks'){ var t=document.getElementById('tracks'); if(t){ t.scrollIntoView(); } }
   var form=document.getElementById('book-form'), msg=document.getElementById('form-msg');
-  form.addEventListener('submit',function(e){
-    e.preventDefault();
-    msg.textContent='Thank you for looking — this preview form does not send anything yet. Booking will open on this page shortly, and your details have not been sent or saved.';
+  var submitBtn=form.querySelector('button[type="submit"]');
+  function showMsg(text){
+    msg.textContent=text;
     msg.classList.add('show');
     msg.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+  form.addEventListener('submit',function(e){
+    e.preventDefault();
+    var nameEl=document.getElementById('f-name'), emailEl=document.getElementById('f-email'), textEl=document.getElementById('f-msg');
+    var name=nameEl.value.trim(), email=emailEl.value.trim(), message=textEl.value.trim();
+    var trackEl=form.querySelector('input[name="track"]:checked');
+    var track=trackEl ? trackEl.value : '';
+    if(!name){
+      showMsg('Please add your name, so we know who we’re talking to.');
+      nameEl.focus();
+      return;
+    }
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      showMsg('Please add a valid email address — that’s where we’ll reply.');
+      emailEl.focus();
+      return;
+    }
+    var trackLabel = track==='business' ? 'My business — $199' : 'Daily life — $149';
+    submitBtn.disabled=true;
+    var originalBtnText=submitBtn.textContent;
+    submitBtn.textContent='Sending…';
+    msg.classList.remove('show');
+    fetch('https://formsubmit.co/ajax/ftmoore17@gmail.com',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({
+        name:name,
+        email:email,
+        track:trackLabel,
+        message:message,
+        _subject:'New booking request — Handled.',
+        _template:'table',
+        _captcha:'false'
+      })
+    }).then(function(res){
+      if(!res.ok){ throw new Error('Send failed'); }
+      return res.json().catch(function(){ return {}; });
+    }).then(function(){
+      form.reset();
+      var lifeRadio=form.querySelector('input[name="track"][value="life"]');
+      if(lifeRadio){ lifeRadio.checked=true; }
+      submitBtn.disabled=false;
+      submitBtn.textContent=originalBtnText;
+      showMsg('Thank you, '+name.split(' ')[0]+' — your request has been sent. We’ll reply by email shortly to arrange your Muse setup.');
+    }).catch(function(){
+      submitBtn.disabled=false;
+      submitBtn.textContent=originalBtnText;
+      showMsg('Sorry — that didn’t send. Please check your connection and try again.');
+    });
   });
 })();
 </script>
